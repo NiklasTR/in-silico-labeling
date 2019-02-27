@@ -170,7 +170,7 @@ def model(core_model: Callable,
     input_lt = lt.reshape(input_lt, ['z', 'channel', 'mask'], ['depth'])
     input_op = input_lt.tensor
 
-    core_model_op = core_model(is_train=is_train, input_op=input_op, name=name)
+    core_model_op, custom_layers = core_model(is_train=is_train, input_op=input_op, name=name)
 
     # Define output
     output_lts = []
@@ -199,6 +199,8 @@ def model(core_model: Callable,
 
         z_lts.append(lt.concat(channel_lts, 'channel'))
       output_lts.append(lt.concat(z_lts, 'z', name=scope + str(i)))
+
+    output_lts.append(custom_layers)
 
     return output_lts
 
@@ -259,7 +261,7 @@ def get_input_target_and_predicted(
          (target_lt.axes['z'].labels, target_lt.axes['channel'].labels)],
         gitapp.num_classes)
     # pylint: disable=unbalanced-tuple-unpacking
-    predict_input_lt, predict_target_lt = model(
+    predict_input_lt, predict_target_lt, custom_layers = model(
         gitapp.core_model, gitapp.add_head, pp, gitapp.is_train, input_lt)
     # pylint: enable=unbalanced-tuple-unpacking
     # Ensure the model output size is as we expect.
@@ -279,8 +281,9 @@ def get_input_target_and_predicted(
     predict_target_lt = lt.identity(
         predict_target_lt, name=scope + 'predict_target')
 
+    print("Patch centers:",len(patch_centers), input_lt.shape, target_lt.shape, predict_input_lt.shape, predict_target_lt.shape)
     return (patch_centers, input_lt, target_lt, predict_input_lt,
-            predict_target_lt)
+            predict_target_lt, custom_layers)
 
 
 def add_loss(
@@ -396,7 +399,7 @@ def setup_losses(
   logging.info('Setting up losses')
   with tf.name_scope(name, 'setup_losses', []) as scope:
     (_, input_lt, target_lt, predict_input_lt,
-     predict_target_lt) = get_input_target_and_predicted(gitapp)
+     predict_target_lt, custom_layers) = get_input_target_and_predicted(gitapp)
 
     predicted_size = len(predict_input_lt.axes['row'])
     visualize.summarize_image(
@@ -450,7 +453,9 @@ def setup_stitch(
   logging.info('Setting up stitch')
   with tf.name_scope(name, 'setup_stitch', []) as scope:
     (patch_centers, input_lt, target_lt, predict_input_lt,
-     predict_target_lt) = get_input_target_and_predicted(gitapp)
+     predict_target_lt, custom_layers) = get_input_target_and_predicted(gitapp)
+
+    print(patch_centers)
 
     predicted_size = len(predict_input_lt.axes['row'])
     assert predicted_size == len(predict_input_lt.axes['column'])
@@ -533,6 +538,7 @@ def setup_stitch(
     visualize_op_dict['predict_input'] = predict_input_lt
     visualize_op_dict['target'] = target_lt
     visualize_op_dict['predict_target'] = predict_target_lt
+    visualize_op_dict['custom_layers'] = custom_layers
 
     def summarize(tag, labeled_tensor):
       visualize.summarize_image(labeled_tensor, name=scope + 'summarize/' + tag)

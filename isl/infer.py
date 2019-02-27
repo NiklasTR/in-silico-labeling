@@ -19,6 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import os
+import pickle
 
 import numpy as np
 import tensorflow as tf
@@ -30,6 +31,8 @@ from isl import data_provider
 from isl import ops
 from isl import util
 from isl import visualize
+
+import numpy as np
 
 gfile = tf.gfile
 logging = tf.logging
@@ -130,6 +133,7 @@ def infer(
     visualize_target_lt = visualization_lts['target']
     visualize_predict_target_lt = get_statistics(
         visualization_lts['predict_target'])
+    obtain_features = visualization_lts['custom_layers']['upper_recursion_13']
 
     input_lt = lt.LabeledTensor(
         tf.placeholder(
@@ -229,6 +233,8 @@ def infer(
     init_fn = util.restore_model(
         restore_directory, restore_logits=True, restore_global_step=True)
 
+    print(visualization_lts['custom_layers'])
+
     with tf.Session() as sess:
       logging.info('Generating images')
       init_fn(sess)
@@ -237,21 +243,25 @@ def infer(
       predict_input_rows = []
       target_rows = []
       predict_target_rows = []
+      features_rows = []
+      features_pack = []
       for infer_row in range(num_row_inferences):
         input_row = []
         predict_input_row = []
         target_row = []
         predict_target_row = []
+        features_row = []
         for infer_column in range(num_column_inferences):
           rs = infer_row * infer_size * stitch_stride
           cs = infer_column * infer_size * stitch_stride
           logging.info('Running inference at offset: (%d, %d)', rs, cs)
-          [inpt, predict_input, target, predict_target] = sess.run(
+          [inpt, predict_input, target, predict_target, local_features] = sess.run(
               [
                   visualize_input_lt,
                   visualize_predict_input_lt,
                   visualize_target_lt,
                   visualize_predict_target_lt,
+                  obtain_features,
               ],
               feed_dict={
                   row_start: rs,
@@ -262,16 +272,23 @@ def infer(
           predict_input_row.append(predict_input)
           target_row.append(target)
           predict_target_row.append(predict_target)
+          features_row.append(local_features)
+          features_pack.append([rs,cs,local_features,inpt])
+          print("In:Shapes => input:",inpt.shape,"target:",target.shape,"features:",local_features.shape)
+          print("Out:Shapes => predicted-input:",predict_input.shape,"predicted-target:",predict_target.shape)
+
         input_rows.append(np.concatenate(input_row, axis=2))
         predict_input_rows.append(np.concatenate(predict_input_row, axis=2))
         target_rows.append(np.concatenate(target_row, axis=2))
         predict_target_rows.append(np.concatenate(predict_target_row, axis=2))
+        features_rows.append(np.concatenate(features_row, axis=2))
 
       logging.info('Stitching')
       stitched_input = np.concatenate(input_rows, axis=1)
       stitched_predict_input = np.concatenate(predict_input_rows, axis=1)
       stitched_target = np.concatenate(target_rows, axis=1)
       stitched_predict_target = np.concatenate(predict_target_rows, axis=1)
+      features = np.concatenate(features_rows, axis=1)
 
       logging.info('Creating error panels')
       [input_error_panel, target_error_panel, global_step] = sess.run(
@@ -296,5 +313,8 @@ def infer(
       util.write_image(
           os.path.join(output_directory, 'target_error_panel.png'),
           target_error_panel[0, :, :, :])
+
+      with open(os.path.join(output_directory, 'featpack.pkl'), 'wb') as outfile:
+          pickle.dump(features_pack, outfile)
 
       logging.info('Done generating images')

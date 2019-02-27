@@ -48,6 +48,9 @@ IN_SCALE_REDUCTION_SIZE = 1
 # nonlinearities.
 INITIAL_PROJECTION_DIMENSION = 16
 
+# Global access to custom layers
+#def init_access_points():
+
 
 @tensorcheck.well_defined()
 def core(
@@ -226,6 +229,7 @@ def core(
 
       deconv_ops.append(deconv_op)
 
+    custom_layers = {}
     recursive_op = tf.concat(deconv_ops, 3)
     assert recursive_op.shape.as_list()[1] == uls[0]
     for r in range(num_upper_recursive_stacks):
@@ -241,6 +245,9 @@ def core(
           is_train=is_train,
           input_op=recursive_op,
           name='upper_recursion_%d' % (r))
+      print(recursive_op)
+      if r >= 12: 
+          custom_layers['upper_recursion_%d' % (r)] = recursive_op
 
     assert recursive_op.shape.as_list()[1] == uls[-1]
-    return tf.identity(recursive_op, name=scope)
+    return tf.identity(recursive_op, name=scope), custom_layers
