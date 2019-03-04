@@ -233,7 +233,7 @@ def infer(
     init_fn = util.restore_model(
         restore_directory, restore_logits=True, restore_global_step=True)
 
-    print(visualization_lts['custom_layers'])
+    #print(visualization_lts['custom_layers'])
 
     with tf.Session() as sess:
       logging.info('Generating images')
@@ -274,8 +274,8 @@ def infer(
           predict_target_row.append(predict_target)
           features_row.append(local_features)
           features_pack.append([rs,cs,local_features,inpt])
-          print("In:Shapes => input:",inpt.shape,"target:",target.shape,"features:",local_features.shape)
-          print("Out:Shapes => predicted-input:",predict_input.shape,"predicted-target:",predict_target.shape)
+          #print("In:Shapes => input:",inpt.shape,"target:",target.shape,"features:",local_features.shape)
+          #print("Out:Shapes => predicted-input:",predict_input.shape,"predicted-target:",predict_target.shape)
 
         input_rows.append(np.concatenate(input_row, axis=2))
         predict_input_rows.append(np.concatenate(predict_input_row, axis=2))

@@ -281,7 +281,7 @@ def get_input_target_and_predicted(
     predict_target_lt = lt.identity(
         predict_target_lt, name=scope + 'predict_target')
 
-    print("Patch centers:",len(patch_centers), input_lt.shape, target_lt.shape, predict_input_lt.shape, predict_target_lt.shape)
+    #print("Patch centers:",len(patch_centers), input_lt.shape, target_lt.shape, predict_input_lt.shape, predict_target_lt.shape)
     return (patch_centers, input_lt, target_lt, predict_input_lt,
             predict_target_lt, custom_layers)
 
@@ -455,7 +455,7 @@ def setup_stitch(
     (patch_centers, input_lt, target_lt, predict_input_lt,
      predict_target_lt, custom_layers) = get_input_target_and_predicted(gitapp)
 
-    print(patch_centers)
+    #print(patch_centers)
 
     predicted_size = len(predict_input_lt.axes['row'])
     assert predicted_size == len(predict_input_lt.axes['column'])

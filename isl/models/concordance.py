@@ -245,7 +245,7 @@ def core(
           is_train=is_train,
           input_op=recursive_op,
           name='upper_recursion_%d' % (r))
-      print(recursive_op)
+      #print(recursive_op)
       if r >= 12: 
           custom_layers['upper_recursion_%d' % (r)] = recursive_op
 
